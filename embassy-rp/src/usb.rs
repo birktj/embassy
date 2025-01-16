@@ -494,9 +494,28 @@ impl<'d, T: Instance> driver::Bus for Bus<'d, T> {
         }
     }
 
-    async fn enable(&mut self) {}
+    async fn enable(&mut self) {
+        let regs = T::regs();
+        regs.main_ctrl().write(|w| {
+            w.set_controller_en(true);
+        });
 
-    async fn disable(&mut self) {}
+        regs.sie_ctrl().modify(|w| {
+            w.set_pullup_en(true);
+        });
+    }
+
+    async fn disable(&mut self) {
+        T::regs().main_ctrl().write(|w| {
+            w.set_controller_en(false);
+        });
+
+        T::regs().sie_ctrl().modify(|w| {
+            w.set_pullup_en(false);
+        });
+
+        self.inited = false;
+    }
 
     async fn remote_wakeup(&mut self) -> Result<(), Unsupported> {
         Err(Unsupported)
